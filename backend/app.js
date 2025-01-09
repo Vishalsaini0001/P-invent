@@ -2,16 +2,17 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const bodyParser = require("body-parser");
 const ConnectDb = require("./utils/db");
-const chalk = require('chalk');
+const chalk = require("chalk");
+const route = require("./routes/userRoute");
+const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false }));
 
-app.get("/", (req, res) => {
-  res.send("home page");
-});
+app.use("/api", route);
 
+app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 
 ConnectDb().then(() => {
