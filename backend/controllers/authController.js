@@ -1,6 +1,12 @@
 const UserModel = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
+  //   Generating JWT token
+  const generateToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: "1d" });
+  };
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -31,8 +37,70 @@ const register = asyncHandler(async (req, res) => {
     password,
   });
 
+  //   Gererate token
+  const token = generateToken(user._id);
+
+  //send cookie
+  res.cookie("token", token, {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    expires: new Date(Date.now() + 1000 * 86400), //1 day
+  });
+
   if (user) {
     const { _id, name, email, password, phone, bio, photo } = user;
+    res.status(201).json({
+      _id,
+      name,
+      email,
+      password,
+      phone,
+      bio,
+      photo,
+      token,
+    });
+  } else {
+    res.status(400);
+    throw new Error("Invalid user input");
+  }
+});
+
+//login
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  //validation
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("please enter email or password");
+  }
+
+  //find user in database
+  const existUser = await UserModel.findOne({ email });
+
+  if (!existUser) {
+    res.status(400);
+    throw new Error("User not exists! Register First..");
+  }
+
+  //check password
+  const correctPassword = await bcrypt.compare(password, existUser.password);
+
+  const token = generateToken(existUser._id);
+
+  //send cookie
+  res.cookie("token", token, {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    expires: new Date(Date.now() + 1000 * 86400), //1 day
+  });
+
+  if (existUser && correctPassword) {
+    const { _id, name, email, password, phone, bio, photo } = existUser;
     res.status(201).json({
       _id,
       name,
@@ -44,8 +112,8 @@ const register = asyncHandler(async (req, res) => {
     });
   } else {
     res.status(400);
-    throw new Error("Invalid user input");
+    throw new Error("Invalid email or Password");
   }
 });
 
-module.exports = { register };
+module.exports = { register, login };
