@@ -109,6 +109,7 @@ const login = asyncHandler(async (req, res) => {
       phone,
       bio,
       photo,
+      token
     });
   } else {
     res.status(400);
@@ -116,4 +117,9 @@ const login = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { register, login };
+const logout = asyncHandler( async (req,res)=>{
+    res.cookie("token", "");
+    res.send("logout")
+})
+
+module.exports = { register, login, logout};
