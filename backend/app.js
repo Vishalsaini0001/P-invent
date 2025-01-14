@@ -2,12 +2,15 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const bodyParser = require("body-parser");
 const ConnectDb = require("./utils/db");
+const cookieParser = require("cookie-parser");
 const chalk = require("chalk");
 const route = require("./routes/userRoute");
 const errorHandler = require("./middleware/errorMiddleware");
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
+app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/api", route);

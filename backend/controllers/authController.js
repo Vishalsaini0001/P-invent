@@ -2,12 +2,13 @@ const UserModel = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { use } = require("../routes/userRoute");
 
-  //   Generating JWT token
-  const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: "1d" });
-  };
-
+//Generating JWT token
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET_KEY, { expiresIn: "1d" });
+};
+//register user
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -66,7 +67,6 @@ const register = asyncHandler(async (req, res) => {
     throw new Error("Invalid user input");
   }
 });
-
 //login
 const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -109,17 +109,128 @@ const login = asyncHandler(async (req, res) => {
       phone,
       bio,
       photo,
-      token
+      token,
     });
   } else {
     res.status(400);
     throw new Error("Invalid email or Password");
   }
 });
+//logout
+const logout = asyncHandler(async (req, res) => {
+  res.cookie("token", "", {
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    expires: new Date(0),
+  });
+  return res.status(200).json({ message: "logout Successfully" });
+});
+//get user data
+const getUser = asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user._id);
 
-const logout = asyncHandler( async (req,res)=>{
-    res.cookie("token", "");
-    res.send("logout")
-})
+  if (user) {
+    const { _id, name, email, password, phone, bio, photo } = user;
+    res.status(200).json({
+      _id,
+      name,
+      email,
+      password,
+      phone,
+      bio,
+      photo,
+    });
+  } else {
+    res.status(400);
+    throw new Error("User not found!");
+  }
+});
+//logged in status
+const loggedInStatus = asyncHandler(async (req, res) => {
+  const token = req.cookies.token;
 
-module.exports = { register, login, logout};
+  if (!token) {
+    return res.json(false);
+  }
+  //verify token
+  const verifed = jwt.verify(token, process.env.JWT_SECRET_KEY);
+  if (verifed) {
+    return res.json(true);
+  }
+  return res.json(false);
+});
+//update user
+const updateUser = asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user._id);
+
+  if (user) {
+    const { name, email, phone, photo, bio } = user;
+    user.email = email;
+    user.name = req.body.name || name;
+    user.phone = req.body.phone || phone;
+    user.photo = req.body.photo || photo;
+    user.bio = req.body.bio || bio;
+
+    const updatedUser = await user.save();
+    res.status(200).json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      bio: updatedUser.bio,
+      photo: updatedUser.photo,
+    });
+  } else {
+    res.status(404);
+    throw new Error("User not found!");
+  }
+});
+//change password
+const changepassword = asyncHandler(async (req, res) => {
+  const user = await UserModel.findById(req.user._id);
+  const { oldpassword, password } = req.body;
+
+  //validate
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found! please login");
+  }
+
+  if (!oldpassword || !password) {
+    res.status(400);
+    throw new Error("Please Enter All Fields");
+  }
+
+  const passwordIsCorrect = await bcrypt.compare(oldpassword, user.password);
+
+  if (!passwordIsCorrect) {
+    res.status(400);
+    throw new Error("Old password incorrect!");
+  }
+
+  if (passwordIsCorrect) {
+    user.password = password;
+    const updatedPassword = await user.save();
+    res.status(200).send("password changed succesfully");
+  } else {
+    res.status(400);
+    throw new Error("old password incorrect!");
+  }
+});
+// forgot password
+const forgotpassword = asyncHandler(async (req, res) => {
+  res.send("forgot password...");
+});
+
+module.exports = {
+  register,
+  login,
+  logout,
+  getUser,
+  loggedInStatus,
+  updateUser,
+  changepassword,
+  forgotpassword
+};
