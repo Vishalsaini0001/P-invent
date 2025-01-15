@@ -2,7 +2,9 @@ const UserModel = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { use } = require("../routes/userRoute");
+const tokenModel = require("../models/tokenModel");
+const crypto = require("crypto");
+const sendEmail = require("../utils/sendEmail");
 
 //Generating JWT token
 const generateToken = (id) => {
@@ -221,7 +223,53 @@ const changepassword = asyncHandler(async (req, res) => {
 });
 // forgot password
 const forgotpassword = asyncHandler(async (req, res) => {
-  res.send("forgot password...");
+  const { email } = req.body;
+
+  const user = await UserModel.findOne({ email });
+
+  if (!user) {
+    res.status(400);
+    throw new Error("email not exist");
+  }
+
+  let resetToken = crypto.randomBytes(32).toString("hex") + user._id;
+
+  const hashToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  const token = await tokenModel.create({
+    userId: user._id,
+    token: hashToken,
+    createdAt: Date.now(),
+    expireAt: Date.now() + 30 * (60 * 1000), //after 30 min
+  });
+
+  const resetUrl = `${process.env.FRONTEND_URL}/resetPassword/${resetToken}`;
+
+  const message = `
+  <h2>Hello ${user.name} </h2>
+  <p>Please use the URL below to reset your password</p>
+  <p>This Reset URL is valid for 30 Minutes</p>
+
+  <a href=${resetUrl}  clicktracking=off >${resetUrl} </>
+  <p>Regards...</p>
+  <p>Pinvent team</p>
+  
+  `;
+  const subject = "Password Reset Request";
+  const send_to = user.email;
+  const send_from = process.env.EMAIL_USER;
+
+  try {
+    await sendEmail(subject, message, send_to, send_from);
+    res.status(200);
+    res.json({ success: true, message: "Reset Email Sent Successfully " });
+  } catch (error) {
+    res.status(500);
+    throw new Error("Email not sent, Please try again later");
+  }
 });
 
 module.exports = {
@@ -232,5 +280,5 @@ module.exports = {
   loggedInStatus,
   updateUser,
   changepassword,
-  forgotpassword
+  forgotpassword,
 };
