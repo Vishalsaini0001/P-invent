@@ -10,11 +10,12 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
 
-
 const app = express();
 
 // middlewares
-app.use(cors());
+app.use(cors({
+  credentials:true
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.json());
@@ -27,7 +28,6 @@ app.use("/api/products", productRoute);
 
 //error handler
 app.use(errorHandler);
-
 
 const PORT = process.env.PORT || 3000;
 
