@@ -11,27 +11,34 @@ const initialState = {
     bio: "",
     photo: "",
   },
-  userId: "",
+ 
 };
 
 const authSlice = createSlice({
   name: "auth ",
   initialState,
   reducers: {
-    SET_LOGIN(state, action){
-      state.isLoggedIn = action.payload
+    SET_LOGIN(state, action) {
+      state.isLoggedIn = action.payload;
     },
-    SET_NAME(state, action){
-      localStorage.setItem("name", JSON.stringify(action.payload))
-      state.name = action.payload
-      state.email = action.email
-      state.phone = action.phone
-      state.bio = action.bio
-      state.photo = action.photo
+    SET_NAME(state, action) {
+      localStorage.setItem("name", JSON.stringify(action.payload));
+      state.name = action.payload;
+    },
+    SET_USER(state, action) {
+      const profile = action.payload;
+      state.user.name = profile.payload;
+      state.user.email = profile.email;
+      state.user.phone = profile.phone;
+      state.user.bio = profile.bio;
+      state.user.photo = profile.photo;
     },
   },
-})
+});
 
-export const {} = authSlice.actions;
+export const { SET_LOGIN, SET_NAME, SET_USER } = authSlice.actions;
 
+export const SelectIsLoggedIn = (state) => state.auth.isLoggedIn;
+export const SelectName = (state) => state.auth.name;
+export const SelectUser = (state) => state.auth.user;
 export default authSlice.reducer;
